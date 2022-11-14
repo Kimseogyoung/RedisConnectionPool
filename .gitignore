@@ -1,0 +1,9 @@
+.vs
+bin
+obj
+*.config
+*.csproj
+*.user
+*.config
+*.exe
+*.bat
