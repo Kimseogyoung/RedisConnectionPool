@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,28 +11,34 @@ using StackExchange.Redis;
 
 public class RedisConnectionPool
 {
-    ConcurrentQueue<ConnectionMultiplexer> pool = new ConcurrentQueue<ConnectionMultiplexer>();
-        
-    public void CreatePool(int poolSize)
+    static ConcurrentQueue<ConnectionMultiplexer> pool = new ConcurrentQueue<ConnectionMultiplexer>();
+
+    static public void CreatePool(int poolSize)
     {
         for (int i = 0; i < poolSize; i++)
         {
-            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(new ConfigurationOptions()
-            {
-                SyncTimeout = 5000,
-                EndPoints =
-                    {
-                        {"localhost", 6379}
-                    },
-                AbortOnConnectFail = false // this prevents that error
-                   
-            });
-            //var obj = new PooledRedisConnection(redis);
-            pool.Enqueue(redis);
+            Thread thread = new Thread(ConnectRedisClient);
+            thread.Start();
         }
     }
-    private readonly AsyncLock s_lock = new AsyncLock();
-    public async Task<ConnectionMultiplexer> DequeueConnectionAsync()
+    static public void ConnectRedisClient()
+    {
+        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(new ConfigurationOptions()
+        {
+            SyncTimeout = 5000,
+            EndPoints =
+                {
+                    {"localhost", 6379}
+                },
+            AbortOnConnectFail = false // this prevents that error
+                   
+        });
+        //var obj = new PooledRedisConnection(redis);
+        pool.Enqueue(redis);
+        
+    }
+    static private readonly AsyncLock s_lock = new AsyncLock();
+    static public async Task<ConnectionMultiplexer> DequeueConnectionAsync()
     {
         ConnectionMultiplexer connection ;
         using (await s_lock.LockAsync())
@@ -43,7 +50,7 @@ public class RedisConnectionPool
         }
         return connection;
     }
-    public void EnqueueConnection(ConnectionMultiplexer connection)
+    static public void EnqueueConnection(ConnectionMultiplexer connection)
     {
         pool.Enqueue(connection);
     }

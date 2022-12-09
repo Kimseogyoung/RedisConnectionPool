@@ -11,7 +11,7 @@ using System.Xml.Linq;
 
 public  class Test
 {
-    static int _testCount = 10000;
+    static int _testCount = 1000;
 
     static int _poolCount = 0;
     static int _singleCount = 0;
@@ -39,13 +39,12 @@ public  class Test
 
 
 
-    static RedisConnectionPool _pool = new RedisConnectionPool();
     static public void ConnectionPoolTest(int poolSize)
     {
         Console.WriteLine("Create Pool");
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
-        _pool.CreatePool(poolSize);
+        RedisConnectionPool.CreatePool(poolSize);
         stopwatch.Stop();
         Console.WriteLine("Create Pool done " + stopwatch.Elapsed);
 
@@ -68,10 +67,10 @@ public  class Test
     static public async Task SetUsingConnectionPool(int i)
     {
 
-        ConnectionMultiplexer redis = await _pool.DequeueConnectionAsync();
+        ConnectionMultiplexer redis = await RedisConnectionPool.DequeueConnectionAsync();
         IDatabase db = redis.GetDatabase();
         await db.SortedSetAddAsync("pool", new RedisValue(i.ToString()), i);
-        _pool.EnqueueConnection(redis);
+        RedisConnectionPool.EnqueueConnection(redis);
         Interlocked.Increment(ref _poolCount);
     }
 
